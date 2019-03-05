@@ -1,0 +1,98 @@
+1.取点
+function mouse_click_track(imgpath)  %取点
+  global i;
+  global A;
+    i=0;
+    A=zeros(7,2);
+    im=imread(imgpath);      
+    imshow(im); %显示图片
+    hold on;
+    set(gcf,'WindowButtonDownFcn',@MouseClickFcn)
+ 
+    function MouseClickFcn(src,event)
+    global i;
+    global A;
+    i=i+1;
+    point_c=get(gca,'CurrentPoint');    %在当前坐标轴中获取鼠标点击的坐标位置
+    x=point_c(1,1);
+    y=point_c(1,2);
+    A(i,1)=x;
+    A(i,2)=y;
+    if(i==7)
+        A
+        save imageA.mat -ascii A         %保存矩阵A
+    end
+    plot(x,y,'ko', 'MarkerSize', 5,  'MarkerFaceColor', 'r'); 
+    
+
+2.前向映射
+clear;clc;
+load imageB.mat -ascii;
+load imageA.mat -ascii;
+imgA=imread('C:\Users\DELL\Desktop\图像配准\图像配准\image A.jpg');
+imgB=imread('C:\Users\DELL\Desktop\图像配准\图像配准\image B.jpg');
+B=[imageB,[1;1;1;1;1;1;1]]';
+A=[imageA,[1;1;1;1;1;1;1]]';
+H=B*(A')*inv(A*A');
+new_img=uint8(zeros(2600,3200,3));
+ 
+for i=1:2089
+  for j=1:2785
+     a=H*[i;j;1];
+         new_img(500+round(a(1,1)),800+round(a(2,1)),:)=imgB(i,j,:);
+     end
+end
+subplot(1,2,1)
+imshow(new_img);
+title('primary image')
+for i=4:2670
+    for j=4:3330
+    if(new_img(i,j,:)==0)
+        ori=inv(H)*[i-500;j-800;1];
+        if(ori(1,1)>0&&ori(1,1)<2090&&ori(2,1)>0&&ori(2,1)<2786)
+            if(new_img(i+1,j,:)~=0)
+                 new_img(i,j,:)=new_img(i+1,j,:);break;end
+            if(new_img(i-1,j,:)~=0)
+             new_img(i,j,:)=new_img(i-1,j,:);break;end
+            if(new_img(i,j+1,:)~=0)
+                new_img(i,j,:)=new_img(i,j+1,:);break;end
+            if(new_img(i,j-1,:)~=0)
+                new_img(i,j,:)=new_img(i,j-1,:);break;end
+        end
+    end
+end
+end
+subplot(1,2,2)
+imshow(new_img)
+title('final image')
+
+3.系统自带函数
+tform=cp2tform(imageB,imageA,'linear conformal'); 
+Iout=imtransform(imgB,tform); 
+figure 
+subplot(1,2,1),imshow(imrotate(Iout,180)); 
+subplot(1,2,2),imshow(imgA);
+
+4.反向映射
+clc;clear;
+imgB=imread('C:\Users\DELL\Desktop\图像配准\图像配准\image B.jpg');
+H=[ 0.9563   -0.2441  180.7239
+    0.2546    0.9688 -694.3662
+   -0.0000    0.0000    1.0000];
+H_=inv(H);
+new_img=uint8(zeros(2678,3336,3));
+for i=1:2678
+   for j=1:3336
+   t=H_*[i-500;j-800;1];
+   t1=round(t(1,1));
+   t2=round(t(2,1));
+   if(t1>0&&t1<2090&&t2>0&&t2<2786)
+       new_img(i,j,:)=imgB(t1,t2,:);
+   end
+   end
+end
+subplot(1,2,1)
+imshow(imgB)
+subplot(1,2,2)
+imshow(new_img)
+title('backward img')
